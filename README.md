@@ -23,6 +23,6 @@ adafruit_rfm9x.mpy <br>
 ## Version History
 
 * 0.2
-    * Removed Switch A from Code
+    * Removed Switch C from Code
 * 0.1
     * Initial Release
