@@ -15,13 +15,16 @@ from adafruit_display_text import label
 import adafruit_rfm9x
 
 Switch_A = digitalio.DigitalInOut(board.D9)
-Switch_C = digitalio.DigitalInOut(board.D5)
-
 Switch_A.direction = digitalio.Direction.INPUT
-Switch_C.direction = digitalio.Direction.INPUT
-
 Switch_A.pull = Pull.UP
-Switch_C.pull = Pull.UP
+
+# Define display text labels
+PowerOnText1 = "Hello Rocket"
+PowerOnText2 = "Launch Version 1.0!"
+NoneText = "Rocket Say Something!"
+RecieveText = "Rocket Said"
+LaunchText1 = "Rocket Launch Now"
+LaunchText2 = "!!!!!!!!!!!!!!!!!"
 
 displayio.release_displays()
 #Define I2C instance using the default SCL SDA pins
@@ -29,7 +32,7 @@ i2c = board.I2C()
 display_bus = displayio.I2CDisplay(i2c, device_address=0x3c)
 display = adafruit_displayio_ssd1306.SSD1306(display_bus, width=128, height=32)
 
-# Make the display context
+# Turn on All pixels for power up
 splash = displayio.Group()
 display.show(splash)
 
@@ -45,21 +48,36 @@ time.sleep(2.0)
 inner_bitmap = displayio.Bitmap(124, 30, 1)
 inner_palette = displayio.Palette(1)
 inner_palette[0] = 0x000000  # Black
+
+
+# Make the display for power up
 inner_sprite = displayio.TileGrid(inner_bitmap, pixel_shader=inner_palette, x=2, y=1)
+PowerOntext1_area = label.Label(terminalio.FONT, text=PowerOnText1, color=0xFFFF00, x=4, y=6)
+PowerOntext2_area = label.Label(terminalio.FONT, text=PowerOnText2, color=0xFFFF00, x=4, y=22)
 splash.append(inner_sprite)
+splash.append(PowerOntext1_area)
+splash.append(PowerOntext2_area)
+time.sleep(2.0)
 
-# Draw a label
-PowerOnText1 = "Hello Rocket"
-PowerOnText2 = "Launch Version 1.0!"
-text1_area = label.Label(terminalio.FONT, text=PowerOnText1, color=0xFFFF00, x=4, y=6)
-splash.append(text1_area)
-text2_area = label.Label(terminalio.FONT, text=PowerOnText2, color=0xFFFF00, x=4, y=22)
-splash.append(text2_area)
-time.sleep(5.0)
+# Make the display for Launch
+LaunchText = displayio.Group()
+bg_sprite2 = displayio.TileGrid(color_bitmap, pixel_shader=color_palette, x=0, y=0)
+inner_sprite2 = displayio.TileGrid(inner_bitmap, pixel_shader=inner_palette, x=2, y=1)
+Launchtext1_area = label.Label(terminalio.FONT, text=LaunchText1, color=0xFFFF00, x=4, y=6)
+Launchtext2_area = label.Label(terminalio.FONT, text=LaunchText2, color=0xFFFF00, x=4, y=22)
+LaunchText.append(bg_sprite2)
+LaunchText.append(inner_sprite2)
+LaunchText.append(Launchtext1_area)
+LaunchText.append(Launchtext2_area)
 
-# Draw a label
-NoneText = "Rocket Say Something!"
-RecieveText = "Rocket Said Hello!"
+# Make the display for Rocket Response
+ResponseText = displayio.Group()
+bg_sprite3 = displayio.TileGrid(color_bitmap, pixel_shader=color_palette, x=0, y=0)
+inner_sprite3 = displayio.TileGrid(inner_bitmap, pixel_shader=inner_palette, x=2, y=1)
+text1_area = label.Label(terminalio.FONT, text=RecieveText, color=0xFFFF00, x=4, y=6)
+ResponseText.append(bg_sprite3)
+ResponseText.append(inner_sprite3)
+ResponseText.append(text1_area)
 
 # Define radio parameters.
 RADIO_FREQ_MHZ = 915.0  # Frequency of the radio in Mhz. Must match your
@@ -107,14 +125,13 @@ while True:
     if Switch_A.value:
         print("Switch_A is High!")
         rfm9x.send(bytes("No Launch!\r\n", "utf-8"))
+
     else:
         print("Switch_A is Low!")
         rfm9x.send(bytes("Launch", "utf-8"))
+        display.show(LaunchText)
+
         continue
-    if Switch_C.value:
-        print("Switch_C is High!")
-    else:
-        print("Switch_C is Low!")
 
     rfm9x.send(bytes("Hello Rocket!\r\n", "utf-8"))
     print("Sent Hello Rocket!")
@@ -139,13 +156,15 @@ while True:
         # if you intend to do string processing on your data.  Make sure the
         # sending side is sending ASCII data before you try to decode!
         packet_text = str(packet, "ascii")
+        received_text = "{0}".format(packet_text)
+        print (received_text)
         print("Received (ASCII): {0}".format(packet_text))
         # Also read the RSSI (signal strength) of the last received message and
         # print it.
         rssi = rfm9x.last_rssi
+        received_signal = "{0} dB".format(rssi)
         print("Received signal strength: {0} dB".format(rssi))
-        text1_area = label.Label(terminalio.FONT, text=RecieveText, color=0xFFFF00, x=4, y=6)
-        display.show(text1_area)
+        display.show(ResponseText)
         time.sleep(1.0)
-        text2_area = label.Label(terminalio.FONT, text="Received: {0}".format(packet_text), color=0xFFFF00, x=4, y=22)
+        text2_area = label.Label(terminalio.FONT, text=received_text+received_signal, color=0xFFFF00, x=4, y=6)
         display.show(text2_area)
